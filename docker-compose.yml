@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo-replica
+    restart: always
+    command: ["mongod", "--replSet", "rs0", "--bind_ip", "0.0.0.0"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  zookeeper:
+
+  kafka:
+
+  logStreamer:
+
+  kafkaUI:
+  
+
+volumes:
+  mongo_data:
