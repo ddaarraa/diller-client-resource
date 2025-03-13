@@ -36,53 +36,49 @@ services:
   mongo1:
     image: mongo:latest
     container_name: mongo1
-    restart: always
-    command: ["mongod", "--replSet", "rs0"]
+    hostname: mongo1
+    command: mongod --replSet rs0 --bind_ip_all --keyFile /data/mongodb-keyfile
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=adminpassword
+    ports:
+      - "27017:27017"
     volumes:
-      - ./mongo-data/mongo1:/data/db
-      - ./mongo-keyfile/keyfile:/data/keyfile
+      - mongo1_data:/data/db
+      - ./mongodb-keyfile:/data/mongodb-keyfile
     networks:
-      - mongo-net
-
-  mongo2:
-    image: mongo:latest
-    container_name: mongo2
+      mongo-network:
+        ipv4_address: 192.168.117.3
     restart: always
-    command: ["mongod", "--replSet", "rs0"]
-    volumes:
-      - ./mongo-data/mongo2:/data/db
-      - ./mongo-keyfile/keyfile:/data/keyfile
-    networks:
-      - mongo-net
 
-  mongo3:
+  mongo-init:
     image: mongo:latest
-    container_name: mongo3
-    restart: always
-    command: ["mongod", "--replSet", "rs0"]
-    volumes:
-      - ./mongo-data/mongo3:/data/db
-      - ./mongo-keyfile/keyfile:/data/keyfile
+    container_name: mongo-init
+    restart: "no"
     networks:
-      - mongo-net
-
-  mongo-setup:
-    image: mongo:latest
-    container_name: mongo-setup
+      - mongo-network
+    volumes:
+      - ./mongodb-keyfile:/data/mongodb-keyfile:rw
     depends_on:
       - mongo1
-      - mongo2
-      - mongo3
-    networks:
-      - mongo-net
-    entrypoint: [ "bash", "-c", "sleep 10 && mongosh --host mongo1:27017 --eval 'rs.initiate({_id: \"rs0\", members: [{ _id: 0, host: \"mongo1:27017\" }, { _id: 1, host: \"mongo2:27017\" }, { _id: 2, host: \"mongo3:27017\" }]})'" ]
-
+    command: >
+      bash -c "
+        sleep 10
+        mongosh --host 192.168.117.3:27017 -u admin -p adminpassword --authenticationDatabase admin --eval '
+          config = {
+            \"_id\": \"rs0\",
+            \"members\": [
+              { \"_id\": 0, \"host\": \"localhost:27017\", \"priority\": 2 },
+            ]
+          };
+          rs.initiate(config);
+        '
+      "
   broker:
     image: python:3.9
     container_name: broker
     depends_on:
       - kafka
-      - mongo-setup
     volumes:
       - ./broker:/app
     working_dir: /app
@@ -93,5 +89,11 @@ services:
       - MONGO_URI=mongodb://mongo:27017
 
 networks:
-  mongo-net:
+  mongo-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.117.0/24
+
+volumes:
+  mongo1_data:
