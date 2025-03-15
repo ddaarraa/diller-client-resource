@@ -7,12 +7,12 @@ from pymongo import MongoClient
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9093")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
-TOPIC = "sys-logs"
+TOPIC = "application_logs_collection"
 
 def listen_for_new_messages():
     try:
         client = MongoClient(MONGO_URI)
-        db = client["logDatabase"]  # Use your actual DB name
+        db = client["logs_db"]  # Use your actual DB name
         collection = db[TOPIC]
 
         print("Listening for new messages in the 'messages' collection...")
