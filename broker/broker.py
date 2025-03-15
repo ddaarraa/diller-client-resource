@@ -6,7 +6,7 @@ from kafka.admin import NewTopic
 from pymongo import MongoClient
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@mongo1:27017/?replicaSet=rs0")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
 TOPIC = "messages"
 
 # MongoDB Connection Test
