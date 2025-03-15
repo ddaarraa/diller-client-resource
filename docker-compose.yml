@@ -93,7 +93,7 @@ services:
       sh -c "pip3 install --no-cache-dir -r requirements.txt && python3 broker.py"
     environment:
       - KAFKA_BROKER=kafka:9092
-      - MONGO_URI=mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0
+      - MONGO_URI=mongodb://admin:adminpassword@mongo1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0
     networks:
       - mongo-network
       - kafka-network
