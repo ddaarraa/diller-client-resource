@@ -5,7 +5,7 @@ from kafka import KafkaConsumer, KafkaProducer, KafkaAdminClient
 from kafka.admin import NewTopic
 from pymongo import MongoClient
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9093")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
 TOPIC = "sys-logs"
 
@@ -17,23 +17,33 @@ def listen_for_new_messages():
 
         print("Listening for new messages in the 'messages' collection...")
 
+
         # Create a Change Stream to listen for new inserts
+        producer = KafkaProducer(
+                    bootstrap_servers=KAFKA_BROKER,
+                    value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),  # Serialize messages
+                )
+
         with collection.watch() as stream:
             for change in stream:
                 if change["operationType"] == "insert":
                     print("🔥 New message detected:", change["fullDocument"])
 
+                    producer.send(TOPIC, value=change["fullDocument"])
+                    producer.flush()  # Ensure message is sent
+                    print(f"✅ Message sent to Kafka Topic: {TOPIC}")
+
     except Exception as e:
         print(f"Error: {e}")
 
-if __name__ == "__main__":
-    listen_for_new_messages()
+
 
 # Kafka Topic Check and Creation
 def check_and_create_topic():
     while True:
         try:
             # Kafka Admin Client
+            print("test")
             admin_client = KafkaAdminClient(bootstrap_servers=KAFKA_BROKER)
             print(f"🔄 Connecting to Kafka at {KAFKA_BROKER}...")
             existing_topics = admin_client.list_topics()
@@ -91,7 +101,10 @@ def consume_and_insert_messages():
 #     test_mongo_connection()
 
 #     print("🔄 Checking and creating Kafka topic...")
-#     check_and_create_topic()
 
     # print("🔄 Consuming messages and inserting into MongoDB...")
     # consume_and_insert_messages()
+
+if __name__ == "__main__":
+    check_and_create_topic()
+    listen_for_new_messages()
