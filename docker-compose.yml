@@ -27,7 +27,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
       - "9092:9092"
-      - "9093:9093" # Extra port for external access
+      - "9093:9093"  # Extra port for external access
     networks:
       - kafka-network
 
@@ -45,6 +45,7 @@ services:
       - "8080:8080"
     networks:
       - kafka-network
+
 
   mongo1:
     image: mongo:latest
@@ -87,7 +88,20 @@ services:
           rs.initiate(config);
         '
       "
-
+  broker:
+    image: python:3.9
+    container_name: broker
+    depends_on:
+      - kafka
+    volumes:
+      - ./broker:/app
+    working_dir: /app
+    command: >
+      sh -c "pip3 install --no-cache-dir -r requirements.txt && python3 broker.py"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - MONGO_URI=mongodb://admin:adminpassword@mongo1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0
+      
 networks:
   mongo-network:
     driver: bridge
