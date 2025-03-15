@@ -6,21 +6,28 @@ from kafka.admin import NewTopic
 from pymongo import MongoClient
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@mongo1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
-TOPIC = "messages"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
+TOPIC = "sys-logs"
 
-# MongoDB Connection Test
-def test_mongo_connection():
+def listen_for_new_messages():
     try:
-        # Create a MongoDB client
         client = MongoClient(MONGO_URI)
+        db = client["logDatabase"]  # Use your actual DB name
+        collection = db[TOPIC]
 
-        # Try to get the server information to verify the connection
-        client.admin.command('ping')
-        print("MongoDB connection successful!")
+        print("Listening for new messages in the 'messages' collection...")
 
-    except ConnectionError as e:
-        print(f"Failed to connect to MongoDB: {e}")
+        # Create a Change Stream to listen for new inserts
+        with collection.watch() as stream:
+            for change in stream:
+                if change["operationType"] == "insert":
+                    print("🔥 New message detected:", change["fullDocument"])
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    listen_for_new_messages()
 
 # Kafka Topic Check and Creation
 def check_and_create_topic():
@@ -79,12 +86,12 @@ def consume_and_insert_messages():
         except Exception as e:
             print(f"❌ Error inserting message into MongoDB: {e}")
 
-if __name__ == "__main__":
-    print("🔄 Testing MongoDB connection...")
-    test_mongo_connection()
+# if __name__ == "__main__":
+#     print("🔄 Testing MongoDB connection...")
+#     test_mongo_connection()
 
-    print("🔄 Checking and creating Kafka topic...")
-    check_and_create_topic()
+#     print("🔄 Checking and creating Kafka topic...")
+#     check_and_create_topic()
 
     # print("🔄 Consuming messages and inserting into MongoDB...")
     # consume_and_insert_messages()
