@@ -61,9 +61,9 @@ services:
       - mongo1_data:/data/db
       - ./mongodb-keyfile:/data/mongodb-keyfile:rw
     networks:
-      - shared_network
-      - mongo-network:
+      mongo-network:
         ipv4_address: 192.168.117.3
+      shared_network:
     restart: always
 
   mongo-init:
