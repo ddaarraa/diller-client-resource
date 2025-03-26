@@ -1,51 +1,61 @@
 import os
-from kafka import KafkaConsumer
+import logging
 import schedule
 import time
+from kafka import KafkaConsumer
 from datetime import datetime
+from clustering_service import cluster_messages_dbscan
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9093")
+logging.basicConfig(
+    level=logging.INFO,  # Log only INFO and above
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()]  # Logs to stdout
+)
+logger = logging.getLogger(__name__)
+
+# Suppress Kafka internal logs by adjusting Kafka's log level
+logging.getLogger("kafka").setLevel(logging.WARNING)
+
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
 TOPIC = "diller-logs-queue"
 
 
-# Kafka Consumer
+# Kafka Consumer function
 def consume_kafka_messages():
-    print("Connecting to Kafka...")
+    logger.info("Connecting to Kafka...")
 
     consumer = KafkaConsumer(
         TOPIC,
         bootstrap_servers=[KAFKA_BROKER],
-        auto_offset_reset='earliest',  
-        group_id='my-group1',
+        auto_offset_reset='earliest',
+        group_id='diller-group',
         enable_auto_commit=True,
-        
     )
 
-    # Consume new messages for a short time, then exit
-    # print("Consuming messages from Kafka...")
-    print(f"[{datetime.now()}] Consuming messages from Kafka...")
-    
+    logger.info("Consuming messages from Kafka...")
+
     messages = consumer.poll(timeout_ms=10000)
+
     total_messages = sum(len(msgs) for msgs in messages.values())
-    
+
     if messages:
-        
-        print(total_messages, "messages found.")
-        for tp, msgs in messages.items():
-            for message in msgs:
-                print(f"Consumed message: {message.value.decode('utf-8')}")
+        logger.info(f"{total_messages} messages found.")
+        # for tp, msgs in messages.items():
+        #     for message in msgs:
+        #         logger.info(f"Consumed message: {message.value.decode('utf-8')}")
+        cluster_messages_dbscan(messages)
     else:
-        print("No new messages found.")
+        logger.info("No new messages found.")
 
-    # Close the consumer after processing messages
-    consumer.close()  
-    print( f"[{datetime.now()}]Consumer connection closed.")
+    consumer.close()
+    logger.info("Consumer connection closed.")
 
 
-schedule.every(30).seconds.do(consume_kafka_messages)
+# Schedule the task every 10 seconds
+schedule.every(10).seconds.do(consume_kafka_messages)
 
 if __name__ == '__main__':
-    print("Starting the scheduled Kafka service...")
+    logger.info("Starting the scheduled Kafka service...")
     while True:
-        schedule.run_pending() 
-        time.sleep(1)  
+        schedule.run_pending()
+        time.sleep(1)
