@@ -5,6 +5,7 @@ import time
 from kafka import KafkaConsumer, KafkaProducer, KafkaAdminClient
 from kafka.admin import NewTopic
 from pymongo import MongoClient
+from field_extractor import extract_field
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9093")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
@@ -28,11 +29,12 @@ def listen_for_new_messages(collection):
         with collection_watcher.watch() as stream:
             for change in stream:
                 if change["operationType"] == "insert":
-                    print("🔥 New message detected:", change["fullDocument"])
-
-                    producer.send(TOPIC, value=change["fullDocument"])
+                    # print("🔥 New message detected:", change["fullDocument"])
+                    message = change["fullDocument"]
+                    message = extract_field(message)
+                    producer.send(TOPIC, message)
                     producer.flush()  # Ensure message is sent
-                    print(f"✅ Message sent to Kafka Topic: {TOPIC}")
+                    # print(f"✅ Message sent to Kafka Topic: {TOPIC}")
 
     except Exception as e:
         print(f"Error: {e}")
@@ -54,7 +56,6 @@ def check_and_create_topic():
                 print(f"✅ Created topic '{TOPIC}'")
             else:
                 print(f"✅ Topic '{TOPIC}' already exists")
-
             break
         except Exception as e:
             print(f"❌ Retrying Kafka connection: {e}")
