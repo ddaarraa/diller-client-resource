@@ -43,14 +43,14 @@ def calculate_log_correlation(messages):
     """Calculate correlation between entire logs."""
     features = extract_common_fields(messages)
 
-    # Pearson Correlation
-    correlation_matrix = np.corrcoef(features, rowvar=False)
+    # # Pearson Correlation
+    # correlation_matrix = np.corrcoef(features, rowvar=False)
 
     # Cosine Similarity
     similarity_matrix = cosine_similarity(features)
 
-    logging.info("Pearson Correlation Matrix:")
-    logging.info(correlation_matrix)
+    # logging.info("Pearson Correlation Matrix:")
+    # logging.info(correlation_matrix)
 
     logging.info("Cosine Similarity Matrix:")
     logging.info(similarity_matrix)
