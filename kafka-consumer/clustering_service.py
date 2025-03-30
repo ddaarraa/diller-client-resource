@@ -1,4 +1,5 @@
 import json
+import uuid
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -57,11 +58,13 @@ def cluster_messages_dbscan(messages):
         clustered_messages.setdefault(label, []).append(message)
 
     for cluster_id, cluster in clustered_messages.items():
+        clustering_id = str(uuid.uuid4()) 
         if cluster_id == -1:
             logging.info("\nNoise (unclustered messages):")
         else:
             logging.info(f"\nCluster {cluster_id}:")
+
         for msg in cluster:
-            logging.info(msg)
+            msg['cluster_id'] = clustering_id
             save_to_mongodb(msg)
 
