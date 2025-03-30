@@ -4,6 +4,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import logging
 import numpy as np
+from db import save_to_mongodb
 
 logging.basicConfig(
     level=logging.INFO,  # Log only INFO and above
@@ -62,3 +63,5 @@ def cluster_messages_dbscan(messages):
             logging.info(f"\nCluster {cluster_id}:")
         for msg in cluster:
             logging.info(msg)
+            save_to_mongodb(msg)
+
