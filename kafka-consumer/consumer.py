@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import schedule
@@ -35,7 +36,7 @@ def consume_kafka_messages():
     logger.info("Consuming messages from Kafka...")
 
     # Pass the function reference using a lambda
-    schedule.every(60).seconds.do(lambda: polling_message(consumer=consumer))
+    schedule.every(10).seconds.do(lambda: polling_message(consumer=consumer))
     while True :
         schedule.run_pending()
         # schedule.run_pending()
@@ -45,15 +46,21 @@ def polling_message(consumer) :
     messages = consumer.poll(timeout_ms=10000)
 
     total_messages = sum(len(msgs) for msgs in messages.values())
-
+    export_messages = []
     if messages:
         logger.info(f"{total_messages} messages found.")
-        # for tp, msgs in messages.items():
-        #     for message in msgs:
-        #         logger.info(f"Consumed message: {message.value.decode('utf-8')}")
-        cluster_messages_dbscan(messages)
+        for tp, msgs in messages.items():
+            for message in msgs:
+                logger.info(f"Consumed message: {message.value.decode('utf-8')}")
+                export_messages.append(json.loads(message.value.decode('utf-8')))
+        logger.info(f"export message :{export_messages}")
+        try :
+            cluster_messages_dbscan(export_messages)
+        finally :
+            logger.error(f"stop polling")
     else:
         logger.info("No new messages found.")
+
 
 
 
