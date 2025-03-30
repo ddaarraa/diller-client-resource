@@ -34,6 +34,14 @@ def consume_kafka_messages():
 
     logger.info("Consuming messages from Kafka...")
 
+    # Pass the function reference using a lambda
+    schedule.every(60).seconds.do(lambda: polling_message(consumer=consumer))
+    while True :
+        schedule.run_pending()
+        # schedule.run_pending()
+        time.sleep(1)
+    
+def polling_message(consumer) :
     messages = consumer.poll(timeout_ms=10000)
 
     total_messages = sum(len(msgs) for msgs in messages.values())
@@ -47,15 +55,8 @@ def consume_kafka_messages():
     else:
         logger.info("No new messages found.")
 
-    consumer.close()
-    logger.info("Consumer connection closed.")
 
-
-# Schedule the task every 10 seconds
-schedule.every(10).seconds.do(consume_kafka_messages)
 
 if __name__ == '__main__':
     logger.info("Starting the scheduled Kafka service...")
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    consume_kafka_messages()
