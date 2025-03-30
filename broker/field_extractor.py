@@ -19,3 +19,4 @@ def extract_field(log_entry) :
         return log_entry
     else :
         log_entry["srcport"] = "8080"
+        return log_entry

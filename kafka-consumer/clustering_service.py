@@ -1,70 +1,66 @@
-import json
-import uuid
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-import logging
 import numpy as np
-from db import save_to_mongodb
+import logging
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.metrics.pairwise import cosine_similarity
 
-logging.basicConfig(
-    level=logging.INFO,  # Log only INFO and above
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]  # Logs to stdout
-)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def extract_common_features(messages):
-    """Extract only the common fields across all log formats."""
-    features = []
-    categorical_fields = ["srcaddr"]
+def extract_common_fields(messages):
+    """Extract only the common fields across all logs and process them accordingly."""
+    # Find common fields
+    common_fields = set(messages[0].keys())
+    for msg in messages[1:]:
+        common_fields &= set(msg.keys())  # Intersect fields to find common ones
     
-    # Convert categorical fields to one-hot encoding
-    categorical_data = [[msg.get(field, "UNKNOWN")] for msg in messages for field in categorical_fields]
-    one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
-    one_hot_encoded = one_hot_encoder.fit_transform(categorical_data)
+    common_fields = list(common_fields)
 
-    for i, msg in enumerate(messages):
-        try:
-            start_idx = i * len(categorical_fields)
-            end_idx = start_idx + len(categorical_fields)
-            one_hot_values = one_hot_encoded[start_idx:end_idx].flatten()
+    # Separate numeric and text fields
+    numeric_fields = ['srcport']  # Only numeric field
+    text_fields = [field for field in common_fields if field not in numeric_fields]
 
-            # Use only one-hot values (since we are ignoring format-specific fields)
-            features.append(one_hot_values)
+    # Extract numeric features
+    numeric_features_data = np.array([[msg.get('srcport', 0)] for msg in messages])  # Default to 0 if missing
+    numeric_features = StandardScaler().fit_transform(numeric_features_data)  # Normalize
 
-        except ValueError as e:
-            logger.error(f"Failed to process message: {msg} - Error: {e}")
+    # Extract text features (TF-IDF for message, One-Hot for categorical fields)
+    text_features = []
+    for field in text_fields:
+        texts = [msg.get(field, '') for msg in messages]
+        vectorizer = TfidfVectorizer(stop_words='english', max_features=100)
+        field_text_features = vectorizer.fit_transform(texts).toarray()
+        text_features.append(field_text_features)
 
-    return np.array(features)
+    # Combine text features
+    text_features_combined = np.hstack(text_features) if text_features else np.array([])
+
+    # Combine numeric + text features
+    all_features = np.hstack([numeric_features, text_features_combined]) if text_features_combined.size else numeric_features
+    return all_features
 
 
-def cluster_messages_dbscan(messages):
-    """Cluster messages using DBSCAN after feature extraction."""
-    features = extract_common_features(messages)
+def calculate_log_correlation(messages):
+    """Calculate correlation between entire logs."""
+    features = extract_common_fields(messages)
 
-    # Normalize features
-    features = StandardScaler().fit_transform(features)
+    # Pearson Correlation
+    correlation_matrix = np.corrcoef(features, rowvar=False)
 
-    # Apply DBSCAN
-    dbscan_model = DBSCAN(eps=1.5, min_samples=1, metric="euclidean")  
-    labels = dbscan_model.fit_predict(features)
+    # Cosine Similarity
+    similarity_matrix = cosine_similarity(features)
 
-    num_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    logging.info(f"Number of distinct clusters: {num_clusters}")
+    logging.info("Pearson Correlation Matrix:")
+    logging.info(correlation_matrix)
 
-    clustered_messages = {}
-    for label, message in zip(labels, messages):
-        clustered_messages.setdefault(label, []).append(message)
+    logging.info("Cosine Similarity Matrix:")
+    logging.info(similarity_matrix)
 
-    for cluster_id, cluster in clustered_messages.items():
-        clustering_id = str(uuid.uuid4()) 
-        if cluster_id == -1:
-            logging.info("\nNoise (unclustered messages):")
-        else:
-            logging.info(f"\nCluster {cluster_id}:")
 
-        for msg in cluster:
-            msg['cluster_id'] = clustering_id
-            save_to_mongodb(msg)
+# **Example Logs**
+# logs = [
+#     {"message": "Accepted publickey for ec2-user", "srcport": 17487, "srcaddr": "27.55.94.25"},
+#     {"message": "Accepted password for user1", "srcport": 17487, "srcaddr": "27.55.94.30"},
+#     {"message": "Failed password for root", "srcport": 17487, "srcaddr": "27.55.94.35"},
+# ]
 
+# calculate_log_correlation(logs)

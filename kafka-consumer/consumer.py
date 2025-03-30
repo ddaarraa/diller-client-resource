@@ -5,7 +5,7 @@ import schedule
 import time
 from kafka import KafkaConsumer
 from datetime import datetime
-from clustering_service import cluster_messages_dbscan
+from clustering_service import calculate_log_correlation
 
 logging.basicConfig(
     level=logging.INFO,  # Log only INFO and above
@@ -55,9 +55,9 @@ def polling_message(consumer) :
                 export_messages.append(json.loads(message.value.decode('utf-8')))
         logger.info(f"export message :{export_messages}")
         try :
-            cluster_messages_dbscan(export_messages)
+            calculate_log_correlation(export_messages)
         finally :
-            logger.error(f"stop polling")
+            logger.info(f"stop polling")
     else:
         logger.info("No new messages found.")
 

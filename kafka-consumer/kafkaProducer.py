@@ -1,11 +1,18 @@
 import json
 from kafka import KafkaProducer
+import os 
+from pymongo import MongoClient
 
-# Kafka Producer Setup
-producer = KafkaProducer(
-    bootstrap_servers="localhost:9093",
-    value_serializer=lambda v: json.dumps(v).encode("utf-8")
-)
+
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
+client = MongoClient(MONGO_URI)
+db = client["logs_db"]
+
+# # Kafka Producer Setup
+# producer = KafkaProducer(
+#     bootstrap_servers="localhost:9093",
+#     value_serializer=lambda v: json.dumps(v).encode("utf-8")
+# )
 
 # Fixed Log Data
 
@@ -74,9 +81,11 @@ application_logs = [
     }
 ]
 
-# Sending logs to Kafka
-for log in network_logs + system_logs + application_logs:
-    producer.send("diller-logs-queue", log)
+db["sys_logs_collection"].delete_many(filter={})
+db["application_logs_collection"].delete_many({})
+db["vpc_logs_collection"].delete_many({})
+db["sys_logs_collection"].insert_many(system_logs)
+db["application_logs_collection"].insert_many(application_logs)
+db["vpc_logs_collection"].insert_many(network_logs)
 
-producer.flush()
-print("Fixed logs sent to Kafka!")
+print("Fixed logs sent to DB!")

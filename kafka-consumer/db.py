@@ -12,8 +12,8 @@ def save_to_mongodb(message):
     try:
         collection.insert_one(message)
 
-
-
-
     except Exception as e:
         print(f"Error: {e}")
+
+
+
