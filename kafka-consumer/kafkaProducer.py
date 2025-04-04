@@ -1,7 +1,8 @@
 import json
-from kafka import KafkaProducer
+# from kafka import KafkaProducer
 import os 
 from pymongo import MongoClient
+
 
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:adminpassword@localhost:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0")
