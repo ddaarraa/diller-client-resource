@@ -51,19 +51,38 @@ def calculate_log_correlation(messages):
 
 
 def save_to_correlation_db(messages, similarity_matrix) :
+
     correlation_array = []
     log_ids = [msg.get("_id", f"no_id_{i}") for i, msg in enumerate(messages)]
     for i in range(len(messages)):
+
+        x_type = f"Sys {i + 1}"
+        if 'container_id' in messages[i] :
+            x_type = f"App {i + 1}"
+        elif 'bytes' in messages[i] :
+            x_type = f"Vpc {i + 1}"
+
         for j in range(len(messages)):
+
+            y_type = f"Sys {j + 1}"
+            if 'container_id' in messages[j] :
+                y_type = f"App {j + 1}"
+            elif 'bytes' in messages[j] :
+                y_type =  f"VPC {j + 1}"
+
             correlation_array.append({
-                "log_id_x" + str(i): log_ids[i],
-                "log_id_y" + str(j): log_ids[j],
+                "log_id_x": log_ids[i],
+                "x_type" : x_type,
+                "log_id_y": log_ids[j],
+                "y_type" : y_type,
                 "value": round(float(similarity_matrix[i][j]), 4)
             })
 
     cor_id = str(uuid.uuid4())
     bangkok_tz = pytz.timezone("Asia/Bangkok")
     current_time_bangkok = datetime.now(bangkok_tz).isoformat()
+
+    
 
     correlation_output = {
         "_id": cor_id,
