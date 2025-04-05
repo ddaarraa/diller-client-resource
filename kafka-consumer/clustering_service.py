@@ -5,6 +5,7 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics.pairwise import cosine_similarity
+from db import save_to_mongodb
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -45,19 +46,14 @@ def calculate_log_correlation(messages):
     """Calculate correlation between entire logs."""
     features = extract_common_fields(messages)
 
-    # # Pearson Correlation
-    # correlation_matrix = np.corrcoef(features, rowvar=False)
-
-    # Cosine Similarity
     similarity_matrix = cosine_similarity(features)
     
-    
-    # logging.info("Pearson Correlation Matrix:")
-    # logging.info(correlation_matrix)
-
     logging.info("Cosine Similarity Matrix:")
     logging.info(similarity_matrix)
 
+    save_to_correlation_db(messages=messages, similarity_matrix=similarity_matrix)
+
+def save_to_correlation_db(messages, similarity_matrix) :
     correlation_array = []
 
     log_ids = [msg.get("_id", f"no_id_{i}") for i, msg in enumerate(messages)]
@@ -81,6 +77,10 @@ def calculate_log_correlation(messages):
     # print (correlation_output)
     logging.info("Correlation Output:")
     print(json.dumps(correlation_output, indent=2))
+
+    save_to_mongodb(message=correlation_output, collection="correlation")
+
+    
 
 
 

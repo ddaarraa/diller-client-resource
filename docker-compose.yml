@@ -115,6 +115,9 @@ services:
       - kafka
       - broker
       - mongo1
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - MONGO_URI=mongodb://admin:adminpassword@mongo1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&appName=mongosh+2.4.0
 
 networks:
   mongo-network:
