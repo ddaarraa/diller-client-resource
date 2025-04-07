@@ -64,7 +64,7 @@ def check_and_create_topic():
 
 if __name__ == "__main__":
     processes = []
-    collections = ["sys_logs_collection", "application_logs_collection", "vpc_logs_collection"]
+    collections = ["sys_logs_collection", "application_logs_collection"]
 
     check_and_create_topic() # initiation to kafka
 

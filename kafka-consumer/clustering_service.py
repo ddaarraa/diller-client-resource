@@ -32,9 +32,16 @@ def extract_common_fields(messages):
     text_features = []
     for field in text_fields:
         texts = [msg.get(field, '') for msg in messages]
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=100)
-        field_text_features = vectorizer.fit_transform(texts).toarray()
-        text_features.append(field_text_features)
+        if all(t.strip() == '' for t in texts):
+            continue  # Skip fields with only empty strings
+        try:
+            vectorizer = TfidfVectorizer(stop_words='english', max_features=100)
+            field_text_features = vectorizer.fit_transform(texts).toarray()
+            if field_text_features.shape[1] > 0:
+                text_features.append(field_text_features)
+        except ValueError:
+            # Skip this field if TF-IDF fails due to empty vocabulary
+            continue
 
     # Combine text features
     text_features_combined = np.hstack(text_features) if text_features else np.array([])
