@@ -36,7 +36,7 @@ def consume_kafka_messages():
     logger.info("Consuming messages from Kafka...")
 
     # Pass the function reference using a lambda
-    schedule.every(10).seconds.do(lambda: polling_message(consumer=consumer))
+    schedule.every(60).seconds.do(lambda: polling_message(consumer=consumer))
     while True :
         schedule.run_pending()
         # schedule.run_pending()
