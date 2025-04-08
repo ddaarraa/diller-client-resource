@@ -5,51 +5,47 @@ import logging
 import json
 import pytz
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
 from db import save_to_mongodb
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def extract_common_fields(messages):
-    """Extract only the common fields across all logs and process them accordingly."""
-    # Find common fields
     common_fields = set(messages[0].keys())
     for msg in messages[1:]:
-        common_fields &= set(msg.keys())  # Intersect fields to find common ones
+        common_fields &= set(msg.keys())
     
     common_fields = list(common_fields)
 
-    # Separate numeric and text fields
-    numeric_fields = ['srcport']  # Only numeric field
-    text_fields = [field for field in common_fields if field not in numeric_fields]
+    text_fields = [field for field in common_fields if field not in ['srcport']]
 
-    # Extract numeric features
-    numeric_features_data = np.array([[msg.get('srcport', 0)] for msg in messages])  # Default to 0 if missing
-    numeric_features = StandardScaler().fit_transform(numeric_features_data)  # Normalize
+    srcport_values = [[str(msg.get('srcport', 'unknown'))] for msg in messages] 
+    encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    categorical_features = encoder.fit_transform(srcport_values) 
 
-    # Extract text features (TF-IDF for message, One-Hot for categorical fields)
     text_features = []
     for field in text_fields:
         texts = [msg.get(field, '') for msg in messages]
         if all(t.strip() == '' for t in texts):
-            continue  # Skip fields with only empty strings
+            continue 
         try:
             vectorizer = TfidfVectorizer(stop_words='english', max_features=100)
             field_text_features = vectorizer.fit_transform(texts).toarray()
             if field_text_features.shape[1] > 0:
                 text_features.append(field_text_features)
         except ValueError:
-            # Skip this field if TF-IDF fails due to empty vocabulary
             continue
 
-    # Combine text features
     text_features_combined = np.hstack(text_features) if text_features else np.array([])
+    all_features = (
+        np.hstack([categorical_features, text_features_combined])
+        if text_features_combined.size else categorical_features
+    )
 
-    # Combine numeric + text features
-    all_features = np.hstack([numeric_features, text_features_combined]) if text_features_combined.size else numeric_features
+    all_features = np.nan_to_num(all_features)
+
     return all_features
-
 
 def calculate_log_correlation(messages):
     features = extract_common_fields(messages)
