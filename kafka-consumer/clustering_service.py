@@ -18,12 +18,19 @@ def extract_common_fields(messages):
     
     common_fields = list(common_fields)
 
-    text_fields = [field for field in common_fields if field not in ['srcport']]
+    # Exclude categorical fields from text_fields
+    text_fields = [field for field in common_fields if field not in ['srcport', 'action']]
 
-    srcport_values = [[str(msg.get('srcport', 'unknown'))] for msg in messages] 
+    # Prepare categorical data: srcport + action
+    categorical_values = [
+        [str(msg.get('srcport', 'unknown')), msg.get('action', 'UNKNOWN').upper()]
+        for msg in messages
+    ]
+
     encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
-    categorical_features = encoder.fit_transform(srcport_values) 
+    categorical_features = encoder.fit_transform(categorical_values)
 
+    # Process text fields with TF-IDF
     text_features = []
     for field in text_fields:
         texts = [msg.get(field, '') for msg in messages]
@@ -38,6 +45,7 @@ def extract_common_fields(messages):
             continue
 
     text_features_combined = np.hstack(text_features) if text_features else np.array([])
+
     all_features = (
         np.hstack([categorical_features, text_features_combined])
         if text_features_combined.size else categorical_features
